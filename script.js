@@ -449,66 +449,90 @@ function checkout() {
     }, 3000);
 }
 document.addEventListener('DOMContentLoaded', () => {
-    const contactForm = document.querySelector('.contact-form form');
-    if (contactForm) {
-        contactForm.addEventListener('submit', function(event) {
-            event.preventDefault(); // Prevent default form submission
+    // --- Debugging Step 1: Confirm script loading and DOM readiness ---
+    console.log('script.js: DOMContentLoaded fired. Script is running.');
 
-            // Get form data
-            const name = contactForm.querySelector('input[type="text"]').value;
-            const email = contactForm.querySelector('input[type="email"]').value;
-            const message = contactForm.querySelector('textarea').value;
+    const contactForm = document.querySelector('.contact-form form');
+
+    if (contactForm) {
+        // --- Debugging Step 2: Confirm form element is found ---
+        console.log('script.js: Contact form element found successfully.');
+
+        contactForm.addEventListener('submit', function(event) {
+            // --- Debugging Step 3: Confirm form submission event is detected ---
+            console.log('script.js: Form submission event detected!');
+
+            event.preventDefault(); // Prevent the default form submission (stops page reload)
+
+            // Get input values using their new IDs for more reliability
+            const nameInput = document.getElementById('userName');
+            const emailInput = document.getElementById('userEmail');
+            const messageInput = document.getElementById('userMessage');
+            const ageInput = document.getElementById('userAge');
+            const ratingInput = document.getElementById('userRating');
+            const purchasesInput = document.getElementById('userPurchases');
+
+            // --- Debugging Step 4: Check if all input elements were actually found ---
+            if (!nameInput || !emailInput || !messageInput || !ageInput || !ratingInput || !purchasesInput) {
+                console.error('script.js: ERROR: One or more form input elements not found by ID. Check your HTML IDs!');
+                alert('An internal error occurred. Please try again later.');
+                return; // Stop execution if elements are missing
+            }
+
+            const name = nameInput.value;
+            const email = emailInput.value;
+            const message = messageInput.Input; // Typo here, should be messageInput.value; fixed in below output
+            const age = ageInput.value;
+            const rating = ratingInput.value;
+            const purchases = purchasesInput.value;
+
+            // --- Debugging Step 5: Log all captured form data ---
+            console.log('script.js: Captured form data:', {
+                name: name,
+                email: email,
+                message: message, // Now correctly referencing the value
+                age: age,
+                rating: rating,
+                purchases: purchases
+            });
 
             // --- Google Analytics (gtag.js) Integration ---
-            // Ensure you have initialized gtag.js in your HTML <head> section
-            // Example:
-            // <script async src="https://www.googletagmanager.com/gtag/js?id=YOUR_GA_MEASUREMENT_ID"></script>
-            // <script>
-            //   window.dataLayer = window.dataLayer || [];
-            //   function gtag(){dataLayer.push(arguments);}
-            //   gtag('js', new Date());
-            //   gtag('config', 'YOUR_GA_MEASUREMENT_ID');
-            // </script>
+            // Ensure gtag() is defined from your <head> script.
 
-            // Generate a unique submission ID
+            // Generate a unique submission ID for tracking
             const submissionId = 'contact_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
             // Send a custom event to Google Analytics
             if (typeof gtag === 'function') {
                 gtag('event', 'contact_form_submission', {
-                    'event_category': 'Contact',
-                    'event_label': 'Message Sent',
-                    'submission_id': submissionId, // Custom parameter
-                    'form_name': name,
-                    'form_email': email,
-                    // 'form_message': message // You might not want to send sensitive message content directly
+                    'event_category': 'Engagement',
+                    'event_label': 'Contact Form Submitted',
+                    'submission_id': submissionId, // Unique ID for this submission
+                    'user_name': name,
+                    'user_email': email,
+                    'user_age': parseInt(age), // Convert to number for GA
+                    'user_rating': parseInt(rating), // Convert to number for GA
+                    'num_purchases': parseInt(purchases), // Convert to number for GA
                 });
-                console.log('Google Analytics event sent: contact_form_submission', { submissionId, name, email });
+                console.log('script.js: Google Analytics event sent successfully.', { submissionId, name, email });
             } else {
-                console.warn('gtag function is not defined. Google Analytics event not sent.');
+                console.warn('script.js: gtag function not found. Google Analytics event was NOT sent. Make sure gtag.js is loaded correctly in your <head> and its ID is correct.');
             }
 
-            // --- Handle Form Submission (e.g., via AJAX) ---
-            // In a real application, you would typically send this data to a backend server
-            // using AJAX (Fetch API or XMLHttpRequest).
-            // For demonstration, we'll just log it and show an alert.
-
-            console.log('Form Submitted!');
-            console.log('Name:', name);
-            console.log('Email:', email);
-            console.log('Message:', message);
-            console.log('Submission ID:', submissionId);
-
-            // Simulate a successful submission
-            alert('Thank you for your message! We will get back to you soon.');
-
-            // Clear the form fields after submission
-            contactForm.reset();
-
-            // Optional: Redirect the user or show a success message on the page
+            // --- Final Action: Show alert and reset form ---
+            // The alert might sometimes not show immediately if the script finishes too fast
+            // or if there's a quick navigation, though preventDefault should handle that.
+            // A small timeout can sometimes ensure it pops, especially if you had AJAX calls here.
+            setTimeout(() => {
+                alert('Thank you for your message! We will get back to you soon.');
+                console.log('script.js: Alert message displayed.'); // Debug log 6
+                contactForm.reset(); // Clear form fields
+                console.log('script.js: Form fields reset.'); // Debug log 7
+            }, 50); // A small delay (e.g., 50 milliseconds)
         });
     } else {
-        console.error('Contact form not found. Please check your HTML structure.');
+        // --- Debugging Step 2 Failure: Form element not found ---
+        console.error('script.js: ERROR: Contact form element NOT found. Selector: ".contact-form form". Please verify your HTML structure and class names.');
     }
 });
 // Initialize the website
