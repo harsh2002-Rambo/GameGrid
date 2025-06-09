@@ -448,6 +448,68 @@ function checkout() {
         checkoutBtn.disabled = false;
     }, 3000);
 }
+document.addEventListener('DOMContentLoaded', () => {
+    const contactForm = document.querySelector('.contact-form form');
+    if (contactForm) {
+        contactForm.addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default form submission
 
+            // Get form data
+            const name = contactForm.querySelector('input[type="text"]').value;
+            const email = contactForm.querySelector('input[type="email"]').value;
+            const message = contactForm.querySelector('textarea').value;
+
+            // --- Google Analytics (gtag.js) Integration ---
+            // Ensure you have initialized gtag.js in your HTML <head> section
+            // Example:
+            // <script async src="https://www.googletagmanager.com/gtag/js?id=YOUR_GA_MEASUREMENT_ID"></script>
+            // <script>
+            //   window.dataLayer = window.dataLayer || [];
+            //   function gtag(){dataLayer.push(arguments);}
+            //   gtag('js', new Date());
+            //   gtag('config', 'YOUR_GA_MEASUREMENT_ID');
+            // </script>
+
+            // Generate a unique submission ID
+            const submissionId = 'contact_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+            // Send a custom event to Google Analytics
+            if (typeof gtag === 'function') {
+                gtag('event', 'contact_form_submission', {
+                    'event_category': 'Contact',
+                    'event_label': 'Message Sent',
+                    'submission_id': submissionId, // Custom parameter
+                    'form_name': name,
+                    'form_email': email,
+                    // 'form_message': message // You might not want to send sensitive message content directly
+                });
+                console.log('Google Analytics event sent: contact_form_submission', { submissionId, name, email });
+            } else {
+                console.warn('gtag function is not defined. Google Analytics event not sent.');
+            }
+
+            // --- Handle Form Submission (e.g., via AJAX) ---
+            // In a real application, you would typically send this data to a backend server
+            // using AJAX (Fetch API or XMLHttpRequest).
+            // For demonstration, we'll just log it and show an alert.
+
+            console.log('Form Submitted!');
+            console.log('Name:', name);
+            console.log('Email:', email);
+            console.log('Message:', message);
+            console.log('Submission ID:', submissionId);
+
+            // Simulate a successful submission
+            alert('Thank you for your message! We will get back to you soon.');
+
+            // Clear the form fields after submission
+            contactForm.reset();
+
+            // Optional: Redirect the user or show a success message on the page
+        });
+    } else {
+        console.error('Contact form not found. Please check your HTML structure.');
+    }
+});
 // Initialize the website
 document.addEventListener('DOMContentLoaded', init);
