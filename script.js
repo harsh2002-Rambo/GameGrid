@@ -234,7 +234,7 @@ function createProductCard(product) {
             <span class="stars">${generateStars(product.rating)}</span>
             <span>(${product.rating})</span>
         </div>
-        <button class="add-to-cart" onclick="addToCart(${product.id})">
+        <button class="add-to-cart" onclick="addToCart(event, ${product.id})">
             Add to Cart
         </button>
     `;
@@ -259,7 +259,7 @@ function generateStars(rating) {
 }
 
 // Add product to cart
-function addToCart(productId) {
+function addToCart(event, productId) { // Add 'event' as a parameter
     const product = products.find(p => p.id === productId);
     if (!product) return;
 
@@ -277,9 +277,26 @@ function addToCart(productId) {
     saveCart();
     updateCartCount();
     showSuccessPopup();
-    
+
+    // --- NEW: Data Layer Push for GTM ---
+    window.dataLayer = window.dataLayer || []; // Ensure dataLayer is initialized
+    dataLayer.push({
+        event: 'add_to_cart_custom', // Your custom event name
+        ecommerce: { // GA4 recommended e-commerce schema
+            items: [{
+                item_id: product.id.toString(),
+                item_name: product.title,
+                item_category: product.category,
+                price: product.price,
+                quantity: existingItem ? existingItem.quantity : 1 // Send the new quantity
+            }]
+        }
+    });
+    console.log('dataLayer push for add_to_cart_custom:', { product: product.title, quantity: existingItem ? existingItem.quantity : 1 }); // For debugging
+
+
     // Add loading animation to button
-    const button = event.target;
+    const button = event.target; // Now 'event' is defined!
     const originalText = button.textContent;
     button.innerHTML = '<span class="loading"></span> Adding...';
     button.disabled = true;
@@ -289,7 +306,6 @@ function addToCart(productId) {
         button.disabled = false;
     }, 1000);
 }
-
 // Save cart to localStorage
 function saveCart() {
     localStorage.setItem('gamezone_cart', JSON.stringify(cart));
@@ -406,11 +422,31 @@ function updateQuantity(productId, change) {
 }
 
 // Remove item from cart
+// Remove item from cart
 function removeFromCart(productId) {
+    const itemToRemove = cart.find(item => item.id === productId); // Get item before filtering
+    if (!itemToRemove) return;
+
     cart = cart.filter(item => item.id !== productId);
     saveCart();
     updateCartCount();
     renderCart();
+
+    // --- NEW: Data Layer Push for remove_from_cart ---
+    window.dataLayer = window.dataLayer || [];
+    dataLayer.push({
+        event: 'remove_from_cart_custom',
+        ecommerce: {
+            items: [{
+                item_id: itemToRemove.id.toString(),
+                item_name: itemToRemove.title,
+                item_category: itemToRemove.category,
+                price: itemToRemove.price,
+                quantity: itemToRemove.quantity // Quantity being removed
+            }]
+        }
+    });
+    console.log('dataLayer push for remove_from_cart_custom:', itemToRemove.title); // For debugging
 }
 
 // Show success popup
@@ -458,78 +494,71 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- Debugging Step 2: Confirm form element is found ---
         console.log('script.js: Contact form element found successfully.');
 
-        contactForm.addEventListener('submit', function(event) {
-            // --- Debugging Step 3: Confirm form submission event is detected ---
-            console.log('script.js: Form submission event detected!');
+        // Ensure contactForm is defined earlier in your script, e.g.:
+// const contactForm = document.querySelector('.contact-form form');
+// if (contactForm) { ... } // Your existing check for contactForm
 
-            event.preventDefault(); // Prevent the default form submission (stops page reload)
+contactForm.addEventListener('submit', function(event) {
+    // --- Debugging Step 3: Confirm form submission event is detected ---
+    console.log('script.js: Form submission event detected!');
 
-            // Get input values using their new IDs for more reliability
-            const nameInput = document.getElementById('userName');
-            const emailInput = document.getElementById('userEmail');
-            const messageInput = document.getElementById('userMessage');
-            const ageInput = document.getElementById('userAge');
-            const ratingInput = document.getElementById('userRating');
-            const purchasesInput = document.getElementById('userPurchases');
+    event.preventDefault(); // Prevent the default form submission (stops page reload)
 
-            // --- Debugging Step 4: Check if all input elements were actually found ---
-            if (!nameInput || !emailInput || !messageInput || !ageInput || !ratingInput || !purchasesInput) {
-                console.error('script.js: ERROR: One or more form input elements not found by ID. Check your HTML IDs!');
-                alert('An internal error occurred. Please try again later.');
-                return; // Stop execution if elements are missing
-            }
+    // Get input values using their new IDs for more reliability
+    const nameInput = document.getElementById('userName');
+    const emailInput = document.getElementById('userEmail');
+    const messageInput = document.getElementById('userMessage');
+    const ageInput = document.getElementById('userAge');
+    const ratingInput = document.getElementById('userRating');
+    const purchasesInput = document.getElementById('userPurchases');
 
-            const name = nameInput.value;
-            const email = emailInput.value;
-            const message = messageInput.Input; // Typo here, should be messageInput.value; fixed in below output
-            const age = ageInput.value;
-            const rating = ratingInput.value;
-            const purchases = purchasesInput.value;
+    // --- Debugging Step 4: Check if all input elements were actually found ---
+    if (!nameInput || !emailInput || !messageInput || !ageInput || !ratingInput || !purchasesInput) {
+        console.error('script.js: ERROR: One or more form input elements not found by ID. Check your HTML IDs!');
+        alert('An internal error occurred. Please try again later.');
+        return; // Stop execution if elements are missing
+    }
 
-            // --- Debugging Step 5: Log all captured form data ---
-            console.log('script.js: Captured form data:', {
-                name: name,
-                email: email,
-                message: message, // Now correctly referencing the value
-                age: age,
-                rating: rating,
-                purchases: purchases
-            });
+    const name = nameInput.value;
+    const email = emailInput.value;
+    const message = messageInput.value; // CORRECTED: Changed from messageInput.Input to messageInput.value
+    const age = ageInput.value;
+    const rating = ratingInput.value;
+    const purchases = purchasesInput.value;
 
-            // --- Google Analytics (gtag.js) Integration ---
-            // Ensure gtag() is defined from your <head> script.
+    // --- Debugging Step 5: Log all captured form data ---
+    console.log('script.js: Captured form data:', {
+        name: name,
+        email: email,
+        message: message,
+        age: age,
+        rating: rating,
+        purchases: purchases
+    });
 
-            // Generate a unique submission ID for tracking
-            const submissionId = 'contact_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    // --- NEW: Data Layer Push for GTM ---
+    // Ensure dataLayer is initialized before pushing to it
+    window.dataLayer = window.dataLayer || []; 
+    dataLayer.push({
+        event: 'contact_form_submit_custom', // This is the custom event name GTM will listen for
+        form_name: 'contact_us_form',      // A static identifier for this specific form
+        user_name: name,                   // User's name from the form
+        user_email: email,                 // User's email from the form (CAUTION: PII)
+        user_age: parseInt(age),           // User's age (converted to a number for metrics)
+        user_rating: parseInt(rating),     // User's rating (converted to a number for metrics)
+        num_purchases: parseInt(purchases) // Number of purchases (converted to a number for metrics)
+    });
+    console.log('dataLayer push for contact_form_submit_custom event sent to Data Layer.');
 
-            // Send a custom event to Google Analytics
-            if (typeof gtag === 'function') {
-                gtag('event', 'contact_form_submission', {
-                    'event_category': 'Engagement',
-                    'event_label': 'Contact Form Submitted',
-                    'submission_id': submissionId, // Unique ID for this submission
-                    'user_name': name,
-                    'user_email': email,
-                    'user_age': parseInt(age), // Convert to number for GA
-                    'user_rating': parseInt(rating), // Convert to number for GA
-                    'num_purchases': parseInt(purchases), // Convert to number for GA
-                });
-                console.log('script.js: Google Analytics event sent successfully.', { submissionId, name, email });
-            } else {
-                console.warn('script.js: gtag function not found. Google Analytics event was NOT sent. Make sure gtag.js is loaded correctly in your <head> and its ID is correct.');
-            }
-
-            // --- Final Action: Show alert and reset form ---
-            // The alert might sometimes not show immediately if the script finishes too fast
-            // or if there's a quick navigation, though preventDefault should handle that.
-            // A small timeout can sometimes ensure it pops, especially if you had AJAX calls here.
-            setTimeout(() => {
-                alert('Thank you for your message! We will get back to you soon.');
-                console.log('script.js: Alert message displayed.'); // Debug log 6
-                contactForm.reset(); // Clear form fields
-                console.log('script.js: Form fields reset.'); // Debug log 7
-            }, 50); // A small delay (e.g., 50 milliseconds)
-        });
+    // --- Final Action: Show alert and reset form ---
+    // A small delay to ensure Data Layer push registers before alert/reset
+    setTimeout(() => {
+        alert('Thank you for your message! We will get back to you soon.');
+        console.log('script.js: Alert message displayed.');
+        contactForm.reset(); // Clear form fields
+        console.log('script.js: Form fields reset.');
+    }, 50); 
+});
     } else {
         // --- Debugging Step 2 Failure: Form element not found ---
         console.error('script.js: ERROR: Contact form element NOT found. Selector: ".contact-form form". Please verify your HTML structure and class names.');
