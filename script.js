@@ -468,24 +468,109 @@ function checkout() {
         return;
     }
 
-    // Simulate checkout process
+    // Capture cart items *before* they are cleared for the purchase event.
+    // This is crucial to send the correct items and quantities that were just purchased.
+    const purchasedItems = [...cart]; // Create a copy of the current cart
+
+    // --- NEW: Data Layer Push for initiate_checkout event ---
+    // (This event fires when they START the checkout process)
+    window.dataLayer = window.dataLayer || []; // Ensure dataLayer is initialized
+    dataLayer.push({
+        event: 'initiate_checkout_custom', // Your custom event name for beginning checkout
+        ecommerce: {
+            items: purchasedItems.map(item => ({ // Use the copied items for initiate_checkout
+                item_id: item.id.toString(),
+                item_name: item.title,
+                item_category: item.category,
+                price: item.price,
+                quantity: item.quantity
+            }))
+        }
+    });
+    console.log('dataLayer push for initiate_checkout_custom with cart items.'); // For debugging
+
+
+    // Simulate checkout process (UI update and delay)
     const checkoutBtn = document.querySelector('.checkout-btn');
     checkoutBtn.innerHTML = '<span class="loading"></span> Processing...';
     checkoutBtn.disabled = true;
-    
+
+    // This setTimeout simulates the time it takes for a purchase to complete
     setTimeout(() => {
         alert('🎉 Order placed successfully! Thank you for shopping with GameZone!');
-        cart = [];
+
+        // --- NEW: Data Layer Push for purchase_complete_custom event ---
+        // (This event fires when the purchase is confirmed)
+
+        // Calculate total values *before* pushing to dataLayer for purchase
+        const transactionId = 'T' + Date.now(); // Generate a unique transaction ID
+        const subtotal = purchasedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const tax = (subtotal * 0.08).toFixed(2); // Example 8% tax
+        const shipping = (subtotal > 100 ? 0 : 9.99).toFixed(2); // Example free shipping over $100
+        const totalValue = (parseFloat(subtotal) + parseFloat(tax) + parseFloat(shipping)).toFixed(2); // Final total value
+
+        dataLayer.push({
+            event: 'purchase_complete_custom', // Your custom event name for purchase
+            ecommerce: {
+                transaction_id: transactionId,         // Unique transaction ID
+                value: parseFloat(totalValue),         // Total value of the purchase (as a number)
+                tax: parseFloat(tax),                  // Tax amount (as a number)
+                shipping: parseFloat(shipping),        // Shipping cost (as a number)
+                currency: 'USD',                       // Currency (adjust if needed)
+                items: purchasedItems.map(item => ({   // <--- Crucial: The 'items' array for purchased products
+                    item_id: item.id.toString(),
+                    item_name: item.title,
+                    item_category: item.category,
+                    price: item.price,
+                    quantity: item.quantity            // <--- IMPORTANT: Quantity of each item
+                }))
+            }
+        });
+        console.log('dataLayer push for purchase_complete_custom:', transactionId, 'Total:', totalValue, 'Items:', purchasedItems.length); // For debugging
+
+        // --- Post-purchase actions: Clear cart and update UI ---
+        cart = []; // Clear the cart *after* the purchase event has been pushed
         saveCart();
         updateCartCount();
         renderCart();
-        
+
         checkoutBtn.textContent = 'Proceed to Checkout';
         checkoutBtn.disabled = false;
-    }, 3000);
+    }, 3000); // Simulate 3-second processing time
 }
 document.addEventListener('DOMContentLoaded', () => {
     // --- Debugging Step 1: Confirm script loading and DOM readiness ---
+    const navLinks = document.querySelectorAll('.nav-links a'); // Selects all <a> tags within elements that have the class 'nav-links'
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(event) {
+            // IMPORTANT: Consider if you need to prevent default navigation briefly.
+            // If the page changes too quickly, the dataLayer push might not complete.
+            // For this assignment, it's often safer to preventDefault, push, then navigate.
+            // For now, let's just push directly.
+            // event.preventDefault(); // Uncomment this if you face issues with data not being sent
+
+            window.dataLayer = window.dataLayer || []; // Ensures dataLayer exists
+            window.dataLayer.push({
+                'event': 'custom_nav_link_click', // This is the EXACT custom event name GTM will listen for
+                'link_text': this.innerText,       // The visible text of the clicked link (e.g., "Home", "Products")
+                'link_url': this.href,             // The full URL the link points to
+                'link_target': this.target || '_self' // e.g., "_blank" if it opens in new tab, or "_self"
+            });
+
+            console.log('dataLayer push for custom_nav_link_click event sent:', {
+                'event': 'custom_nav_link_click',
+                'link_text': this.innerText,
+                'link_url': this.href,
+                'link_target': this.target || '_self'
+            });
+
+            // If event.preventDefault() was used above, you'd navigate here after a small delay:
+            // setTimeout(() => {
+            //     window.location.href = this.href;
+            // }, 100);
+        });
+    });
     console.log('script.js: DOMContentLoaded fired. Script is running.');
 
     const contactForm = document.querySelector('.contact-form form');
